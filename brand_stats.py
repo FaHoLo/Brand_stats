@@ -14,7 +14,7 @@ def get_and_print_diagram_url():
     number_of_days = 7
     search_query = 'coca cola'
     mention_statistics = get_last_days_statistics(number_of_days, search_query)
-    diagram_url = plot_mention_diagram(mention_statistics, number_of_days)
+    diagram_url = plot_mention_diagram(mention_statistics)
     print(diagram_url)
     return diagram_url
 
@@ -22,8 +22,8 @@ def get_last_days_statistics(number_of_days, search_query):
     days_timestamps = get_last_days_timestamps(number_of_days)
     posts_stats = []
     for day in days_timestamps:
-        date = day[0]
-        number_of_posts = get_number_of_posts(day[1], day[2], search_query)
+        date, start_time, end_time = day
+        number_of_posts = get_number_of_posts(start_time, end_time, search_query)
         posts_stats.append((date, number_of_posts))
     return posts_stats
 
@@ -52,11 +52,11 @@ def get_number_of_posts(start_time, end_time, search_query):
         'start_time': start_time,
         'end_time': end_time,
     }
-    response_data = vk_api_request(method_name, payload)
+    response_data = make_vk_api_request(method_name, payload)
     number_of_posts = response_data['response']['total_count']
     return number_of_posts
 
-def vk_api_request(method_name, payload):
+def make_vk_api_request(method_name, payload):
     vk_access_token = os.getenv('VK_SERVICE_KEY')
     vk_api_version = '5.101'
     vk_url = f'https://api.vk.com/method/{method_name}'
@@ -65,16 +65,20 @@ def vk_api_request(method_name, payload):
         'v': f'{vk_api_version}'
     }
     payload.update(vk_required_params) 
-    response = requests.post(vk_url, params=payload)
-    response.raise_for_status()
-    return response.json()
+    response = requests.post(vk_url, params=payload).json()
+    try: 
+        error_msg = response['error']['error_msg']
+        raise Exception(f'vk api request error. {error_msg}')
+    except KeyError:
+        return response
 
-def plot_mention_diagram(mention_statistics, number_of_days):
+def plot_mention_diagram(mention_statistics):
+    number_of_days = len(mention_statistics)
     days_of_stats = []
     mentions_numbers = []
-    for day_stats in mention_statistics:
-        days_of_stats.append(day_stats[0].strftime('%d.%m.%Y'))
-        mentions_numbers.append(day_stats[1])
+    for day, mentions_number in mention_statistics:
+        days_of_stats.append(day.strftime('%d.%m.%Y'))
+        mentions_numbers.append(mentions_number)
     plot_data = [go.Bar(
             x=days_of_stats,
             y=mentions_numbers
