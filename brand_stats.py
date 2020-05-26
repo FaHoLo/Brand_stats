@@ -1,14 +1,16 @@
-import os
-import requests
-from dotenv import load_dotenv
 import datetime
+import os
+
+from dotenv import load_dotenv
 import plotly.plotly as py
 import plotly.graph_objs as go
+import requests
 
 
 def main():
     load_dotenv()
     get_and_print_diagram_url()
+
 
 def get_and_print_diagram_url():
     number_of_days = 7
@@ -17,6 +19,7 @@ def get_and_print_diagram_url():
     diagram_url = plot_mention_diagram(mention_statistics)
     print(diagram_url)
     return diagram_url
+
 
 def get_last_days_statistics(number_of_days, search_query):
     days_timestamps = get_last_days_timestamps(number_of_days)
@@ -27,6 +30,7 @@ def get_last_days_statistics(number_of_days, search_query):
         posts_stats.append((date, number_of_posts))
     return posts_stats
 
+
 def get_last_days_timestamps(number_of_days):
     today = datetime.date.today()
     timestamps = []
@@ -34,7 +38,8 @@ def get_last_days_timestamps(number_of_days):
         date = today - datetime.timedelta(days=day+1)
         date_timestamps = get_date_timestamps(date)
         timestamps.append((date, date_timestamps['day_start'], date_timestamps['day_end']))
-    return timestamps    
+    return timestamps
+
 
 def get_date_timestamps(date):
     day_start = datetime.datetime(date.year, date.month, date.day, 0, 0, 0)
@@ -44,6 +49,7 @@ def get_date_timestamps(date):
         'day_end': day_end.timestamp()
     }
     return date_timestamps
+
 
 def get_number_of_posts(start_time, end_time, search_query):
     method_name = 'newsfeed.search'
@@ -56,6 +62,7 @@ def get_number_of_posts(start_time, end_time, search_query):
     number_of_posts = response_data['response']['total_count']
     return number_of_posts
 
+
 def make_vk_api_request(method_name, payload):
     vk_access_token = os.getenv('VK_SERVICE_KEY')
     vk_api_version = '5.101'
@@ -64,13 +71,14 @@ def make_vk_api_request(method_name, payload):
         'access_token': f'{vk_access_token}',
         'v': f'{vk_api_version}'
     }
-    payload.update(vk_required_params) 
+    payload.update(vk_required_params)
     response = requests.post(vk_url, params=payload).json()
-    try: 
+    try:
         error_msg = response['error']['error_msg']
         raise Exception(f'vk api request error. {error_msg}')
     except KeyError:
         return response
+
 
 def plot_mention_diagram(mention_statistics):
     number_of_days = len(mention_statistics)
@@ -86,6 +94,7 @@ def plot_mention_diagram(mention_statistics):
     plot_name = f'Last {number_of_days} days statistics from {days_of_stats[0]}'
     diagram_url = py.plot(plot_data, filename=plot_name, auto_open=False)
     return diagram_url
+
 
 if __name__ == '__main__':
     main()
